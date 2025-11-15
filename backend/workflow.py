@@ -16,7 +16,7 @@ def begin_conversation(settings):
 # Adds a slide to the conversation
 def add_slide(slide_url):
     image_file = f"slide_{str(slide_url).zfill(3)}"
-    with open(database_file, 'r+') as f:
+    with open(database_file, 'a') as f:
         f.write(f"slide:::{image_file}\n")
 
 # Gets a chatbot response after receiving a user response
@@ -42,12 +42,13 @@ def get_feedback(user_text):
                         }
                     ]
                 ))
+        print(conversation)
         conversation.append(("user", user_text))
 
         chatbot = Chatbot()
         response = chatbot.response(conversation)
 
-        with open(database_file, 'r+') as f:
+        with open(database_file, 'a') as f:
             f.write(f"user:::{user_text}\n")
             f.write(f"assistant:::{response}\n")
         return response
