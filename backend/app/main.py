@@ -13,7 +13,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from app.api import upload
+from app.api import upload, settings
+from app.api import feedback
 
 
 def reset_data_folder():
@@ -53,6 +54,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(upload.router, prefix="/api", tags=["upload"])
+app.include_router(settings.router, prefix="/api", tags=["settings"])
+app.include_router(feedback.router, prefix="/api", tags=["feedback"])
 
 # Mount static files for serving slide images
 images_dir = Path(__file__).parent.parent / "data" / "images"

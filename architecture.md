@@ -64,12 +64,14 @@ The backend stores only slide images on disk---**no session data**.
       api/
         upload.py        # /upload route
         feedback.py      # /feedback route
+        settings.py      # /settings route
       core/
         slide_converter.py   # ppt/pdf → images
         llm_engine.py        # wrapper around LLM provider
     data/
       images/               # <upload_id>/slide_000.png
       uploads/              # raw uploaded files
+      settings.json         # student profile settings
 
 ### Endpoints
 
@@ -93,6 +95,30 @@ The backend stores only slide images on disk---**no session data**.
     ``` json
     {"student_feedback": "..."}
     ```
+
+#### `POST /settings`
+
+-   Accepts student profile configuration:
+
+    ``` json
+    {
+      "grade_level": "...",
+      "subject": "...",
+      "understanding_level": "...",
+      "explanation_style": "...",
+      "student_persona": "..."
+    }
+    ```
+
+-   Stores settings in `data/settings.json` (creates or updates)
+
+-   Returns confirmation and saved settings
+
+#### `GET /settings`
+
+-   Retrieves current settings from `data/settings.json`
+
+-   Returns settings object or `null` if no settings exist
 
 ### Static Files
 
@@ -122,3 +148,5 @@ app.mount("/images", StaticFiles(directory="data/images"), name="images")
 
 -   `POST /upload`
 -   `POST /feedback`
+-   `POST /settings` - Save student profile configuration
+-   `GET /settings` - Retrieve saved configuration

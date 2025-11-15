@@ -19,8 +19,17 @@ const HomePage: React.FC = () => {
     const uploaded = e.target.files?.[0];
     if (!uploaded) return;
 
-    if (uploaded.type !== "application/pdf") {
-      alert("Please upload a PDF file.");
+    const name = uploaded.name.toLowerCase();
+    const isPdf = uploaded.type === "application/pdf" || name.endsWith(".pdf");
+    const isPptx =
+      uploaded.type ===
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+      name.endsWith(".pptx");
+    const isPpt =
+      uploaded.type === "application/vnd.ms-powerpoint" || name.endsWith(".ppt");
+
+    if (!isPdf && !isPptx && !isPpt) {
+      alert("Please upload a PDF or PowerPoint (.pptx / .ppt) file.");
       return;
     }
 
@@ -37,37 +46,39 @@ const HomePage: React.FC = () => {
     setLoading(true);
 
     try {
+      // 1) Save settings to backend (stateless file)
+      const settingsPayload = {
+        grade_level: gradeLevel,
+        subject,
+        understanding_level: studentLevel,
+        explanation_style: explanationStyle,
+        student_persona: studentPersona,
+      };
+      const settingsRes = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settingsPayload),
+      });
+      if (!settingsRes.ok) {
+        throw new Error("Failed to save settings");
+      }
+      // Persist settings locally for the viewer
+      localStorage.setItem("student_settings", JSON.stringify(settingsPayload));
+
+      // 2) Upload slides to backend
       const formData = new FormData();
       formData.append("file", file);
-
-      // New settings
-      formData.append("gradeLevel", gradeLevel);
-      formData.append("subject", subject);
-      formData.append("studentLevel", studentLevel);
-      formData.append("explanationStyle", explanationStyle);
-      formData.append("studentPersona", studentPersona);
-
-      // TODO: replace with real backend call
-      // const res = await fetch("http://localhost:8000/api/upload", {
-      //   method: "POST",
-      //   body: formData,
-      // });
-      // if (!res.ok) throw new Error("Upload failed");
-      // const data = await res.json();
-      // const presentationId = data.presentationId as string;
-
-      const presentationId = "demo"; // Hackathon placeholder
-
-      console.log("Submitted with:", {
-        file,
-        gradeLevel,
-        subject,
-        studentLevel,
-        explanationStyle,
-        studentPersona,
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
       });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const uploadData = await uploadRes.json();
 
-      navigate(`/viewer/${presentationId}`);
+      // 3) Store slides locally and go to viewer
+      // uploadData.slides: [{ index, image_url, s3_url? }]
+      localStorage.setItem("slides", JSON.stringify(uploadData.slides || []));
+      navigate(`/viewer/session`);
     } catch (err) {
       console.error(err);
       alert("Something went wrong while processing your PDF.");
@@ -119,7 +130,7 @@ const HomePage: React.FC = () => {
             <input
               id="pdf-file"
               type="file"
-              accept="application/pdf"
+              accept="application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint"
               onChange={handleFileChange}
             />
             {file && (

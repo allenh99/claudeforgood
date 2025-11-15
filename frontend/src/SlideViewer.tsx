@@ -34,32 +34,28 @@ const SlideViewer: React.FC = () => {
   // Fetch slide data when the viewer loads
   useEffect(() => {
     const fetchSlides = async () => {
-      if (!presentationId) {
-        setError("Missing presentation id.");
-        setLoadingSlides(false);
-        return;
-      }
-
       try {
-        // Replace with your actual backend endpoint
-        // const res = await fetch(
-        //   `http://localhost:8000/api/presentations/${presentationId}`
-        // );
-        // if (!res.ok) throw new Error("Failed to load slides");
-        // const data = await res.json();
-        // setSlides(data.slides as Slide[]);
-
-        // Hackathon stub demo
-        const demoSlides: Slide[] = [
-          { id: 1, imageUrl: "/slides/slides_1.png" },
-          { id: 2, imageUrl: "/slides/slides_2.png" },
-          { id: 3, imageUrl: "/slides/slide_3.png" },
-        ];
-        setSlides(demoSlides);
+        // Load slides from localStorage (stateless backend)
+        const raw = localStorage.getItem("slides");
+        if (!raw) {
+          setError("No slide data found. Please upload a file first.");
+          return;
+        }
+        const storedSlides: Array<{ index: number; image_url: string }> =
+          JSON.parse(raw);
+        const normalized: Slide[] = storedSlides.map((s, i) => ({
+          id: i + 1,
+          imageUrl: s.image_url,
+        }));
+        if (normalized.length === 0) {
+          setError("No slides were generated from your upload.");
+          return;
+        }
+        setSlides(normalized);
         setCurrentSlideIndex(0);
       } catch (err) {
         console.error(err);
-        setError("Could not load slides for this presentation.");
+        setError("Could not load slides from local storage.");
       } finally {
         setLoadingSlides(false);
       }
@@ -97,10 +93,53 @@ const SlideViewer: React.FC = () => {
     setMessages((prev) => [...prev, userMessage]);
     setChatInput("");
 
-    // Later: call your backend assistant endpoint and append an assistant reply
-    // const res = await fetch("http://localhost:8000/api/assistant", {...})
-    // const data = await res.json();
-    // setMessages(prev => [...prev, { id: Date.now() + 1, sender: "assistant", text: data.reply }]);
+    // Call backend feedback endpoint
+    try {
+      const settingsRaw = localStorage.getItem("student_settings");
+      const student_profile = settingsRaw
+        ? JSON.parse(settingsRaw)
+        : {
+            grade_level: "college-intro",
+            subject: "general",
+            understanding_level: "on-level",
+            explanation_style: "step-by-step",
+            student_persona: "curious",
+          };
+
+      const payload = {
+        teacher_text: trimmed,
+        slide_index: currentSlideIndex,
+        slide_text: undefined,
+        student_profile,
+        history: messages.map((m) => ({
+          sender: m.sender,
+          text: m.text,
+        })),
+      };
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Feedback request failed");
+      const data = await res.json();
+      const replyText: string = data.student_feedback || "Okay.";
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, sender: "assistant", text: replyText },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: "assistant",
+          text:
+            "I had trouble generating feedback just now. Please try again in a moment.",
+        },
+      ]);
+    }
   };
 
   if (loadingSlides) {
