@@ -1,82 +1,92 @@
 """
-Feedback API endpoint for generating student-like responses.
-Stateless: does not persist any conversation server-side.
+Feedback API endpoint that accepts a transcript and slide index.
+Currently returns an acknowledgement only (generation will be implemented later).
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Optional
+import json
+
+# Chatbot wrapper (lives at backend/chatbot.py)
+# When running the FastAPI app (module 'app'), the parent directory is on sys.path
+# so we can import 'chatbot' directly.
+try:
+    from chatbot import Chatbot  # type: ignore
+except Exception as e:
+    Chatbot = None  # fallback for environments without OpenAI configured
+
+# Reuse the settings file path from the settings API
+from app.api.settings import SETTINGS_FILE
 
 router = APIRouter()
-
-
-class HistoryItem(BaseModel):
-    sender: str  # "user" | "assistant"
-    text: str
-
-
-class StudentProfile(BaseModel):
-    grade_level: str
-    subject: str
-    understanding_level: str
-    explanation_style: str
-    student_persona: str
 
 
 class FeedbackRequest(BaseModel):
     teacher_text: str
     slide_index: int
-    slide_text: Optional[str] = None
-    student_profile: StudentProfile
-    history: List[HistoryItem] = []
 
 
-class FeedbackResponse(BaseModel):
+class StudentFeedbackResponse(BaseModel):
     student_feedback: str
 
 
-def _generate_placeholder_reply(req: FeedbackRequest) -> str:
+@router.post("/feedback", response_model=StudentFeedbackResponse)
+async def feedback(req: FeedbackRequest) -> StudentFeedbackResponse:
     """
-    Simple rule-based placeholder to simulate a student response without external LLMs.
-    """
-    persona_tone_map = {
-        "curious": "I'm curious about this part. ",
-        "quiet": "I'm not sure I follow. ",
-        "distracted": "I kind of lost track. ",
-        "confident": "I think I get it. ",
-        "skeptical": "Are we sure about that? ",
-    }
-
-    tone = persona_tone_map.get(req.student_profile.student_persona, "")
-    ask_for_more = "Could you explain it in a different way"
-    if req.student_profile.explanation_style == "examples":
-        ask_for_more = "Could you give an example"
-    elif req.student_profile.explanation_style == "analogy":
-        ask_for_more = "Could you share an analogy"
-    elif req.student_profile.explanation_style == "socratic":
-        ask_for_more = "Could you ask me a guiding question"
-    elif req.student_profile.explanation_style == "step-by-step":
-        ask_for_more = "Could you break it down step by step"
-
-    slide_hint = ""
-    if req.slide_text:
-        slide_hint = " Based on the slide content, I notice: " + req.slide_text[:160] + ("..." if len(req.slide_text) > 160 else "")
-
-    return (
-        f"{tone}On slide {req.slide_index + 1}, I heard: \"{req.teacher_text}\"."
-        f"{slide_hint} {ask_for_more} so I can better understand?"
-    )
-
-
-@router.post("/feedback", response_model=FeedbackResponse)
-async def get_feedback(req: FeedbackRequest) -> FeedbackResponse:
-    """
-    Generate a student-like feedback message for the teacher_text, given slide context and profile.
-    This placeholder implementation is deterministic and requires no API keys.
+    Accept a transcript (teacher_text) and slide_index, then generate a
+    simulated student response using the Chatbot with context from settings.
     """
     try:
-        reply = _generate_placeholder_reply(req)
-        return FeedbackResponse(student_feedback=reply)
+        # 1) Load settings if present
+        settings: Optional[dict] = None
+        if SETTINGS_FILE.exists():
+            with open(SETTINGS_FILE, "r") as f:
+                settings = json.load(f)
+
+        # 2) Build system prompt from context template
+        context_path = Path(__file__).parent.parent.parent / "context.txt"
+        system_prompt = "You are a teaching assistant simulating a student."
+        if context_path.exists():
+            template = context_path.read_text()
+            if settings:
+                # Map settings → placeholders
+                system_prompt = (
+                    template
+                    .replace("<persona>", settings.get("student_persona", "curious"))
+                    .replace("<grade>", settings.get("grade_level", "middle"))
+                    .replace("<subject>", settings.get("subject", "general"))
+                    .replace("<level>", settings.get("understanding_level", "on-level"))
+                    .replace("<style>", settings.get("explanation_style", "step-by-step"))
+                )
+            else:
+                system_prompt = template
+
+        # 3) Construct slide image URL for current slide index
+        # Slides are served from /images/slide_{index:03d}.png
+        slide_url = f"/images/slide_{req.slide_index:03d}.png"
+
+        # 4) Compose conversation with system, slide image, and teacher text
+        conversation = [
+            ("system", system_prompt),
+            (
+                "user",
+                [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": slide_url, "detail": "high"},
+                    }
+                ],
+            ),
+            ("user", req.teacher_text),
+        ]
+
+        # 5) Call Chatbot
+        if Chatbot is None:
+            raise RuntimeError("Chatbot is not available (OpenAI client not initialized).")
+        bot = Chatbot()
+        reply = bot.response(conversation, temperature=0.7, max_tokens=300)
+
+        return StudentFeedbackResponse(student_feedback=reply)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate feedback: {str(e)}")
-
-
+        raise HTTPException(status_code=500, detail=f"Failed to receive feedback: {str(e)}")

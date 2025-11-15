@@ -4,7 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a teaching simulation tool where teachers upload PowerPoint/PDF slides, customize student profiles, speak during a simulated lesson, and receive AI-generated feedback. The system uses a **stateless FastAPI backend** with a React + TypeScript frontend.
+This is a **teacher practice and simulation tool** where teachers upload PowerPoint/PDF slides, configure a simulated student profile, and practice teaching by speaking to the slides.
+
+**The AI roleplays as a student**, not an assistant. It asks questions, provides feedback on the teaching, and responds to the teacher's explanations based on the configured student characteristics:
+- Grade level (elementary through college)
+- Understanding level (struggling, on-level, advanced, gifted)
+- Learning style preference (concise, step-by-step, examples, analogies, socratic)
+- Personality/persona (curious, quiet, distracted, confident, skeptical)
+
+Teachers use **voice recording** to speak during their lesson, and the system transcribes their speech and generates realistic student responses via OpenAI LLM.
+
+The system uses a **stateless FastAPI backend** with a React + TypeScript frontend.
 
 ## Architecture Principles
 
@@ -14,14 +24,16 @@ The backend is intentionally stateless—it stores **no session data**. All sess
 - Provides stateless AI feedback endpoints
 
 ### Key Architectural Pattern
-On each teacher utterance, the frontend sends the **complete context** to `/feedback`:
-- `teacher_text`: current utterance
-- `slide_index`: which slide is being taught
-- `slide_text`: optional extracted text from slide
-- `student_profile`: student characteristics for personalized feedback
-- `history`: entire conversation history
+On each teacher utterance (via voice recording), the frontend:
+1. Transcribes speech to text using the browser's Web Speech API
+2. Sends the **complete context** to `/feedback`:
+   - `teacher_text`: transcribed teacher speech
+   - `slide_index`: which slide is being taught
+   - `slide_text`: optional extracted text from slide (currently unused)
+   - `student_profile`: student characteristics for personalized student responses
+   - `history`: entire conversation history (currently unused in the simplified implementation)
 
-The backend generates student-like feedback via LLM and returns it without storing anything.
+The backend uses OpenAI to generate realistic **student responses** (questions, confusion, understanding, feedback) based on the student profile, and returns it without storing anything.
 
 ## Planned Directory Structure
 
@@ -56,21 +68,23 @@ frontend/
 - Static files served via: `app.mount("/images", StaticFiles(directory="data/images"), name="images")`
 
 ### `POST /feedback`
-- Accepts: `{"teacher_text": "...", "slide_index": 1, "slide_text": "...", "student_profile": {...}, "history": [...]}`
-- Process: Calls LLM engine with prompt template
-- Returns: `{"student_feedback": "..."}`
-- **No state persisted**
+- Accepts: `{"teacher_text": "...", "slide_index": 1}` (minimal implementation)
+  - Note: Full implementation would include `student_profile` and `history` for context-aware responses
+- Process: Currently acknowledges receipt; will call OpenAI LLM with student persona prompt template
+- Returns: `{"status": "received"}` (will be `{"student_feedback": "..."}` when LLM is integrated)
+- **No state persisted** - completely stateless
 
 ## Frontend Responsibilities
 
 The frontend is the source of truth for all session state:
 - Upload file and store response (`upload_id`, `slides[]`)
 - Track current slide index (navigation is frontend-only, no backend call needed)
-- Manage student profile configuration
-- Maintain complete conversation history
-- Handle audio → text transcription
-- Send stateless requests to `/feedback` with full context each time
+- Manage student profile configuration (grade level, subject, understanding level, learning style, persona)
+- Maintain complete conversation history (teacher utterances and student responses)
+- Handle **voice recording and speech-to-text transcription** using Web Speech API
+- Send stateless requests to `/feedback` with transcribed teacher speech
 - Display slide images from backend URLs
+- Show simulated student responses in a chat interface
 
 ## Development Notes
 
@@ -98,11 +112,15 @@ When implementing `core/slide_converter.py`:
 - Generate unique `upload_id` using `uuid.uuid4()`
 
 ### LLM Engine Implementation
-When implementing `core/llm_engine.py`:
-- Wrap calls to LLM provider (OpenAI, Anthropic, etc.)
-- Accept teacher utterance, slide context, student profile, and history
-- Generate student-like feedback based on teaching effectiveness
-- Consider prompt engineering for realistic student responses
+The system uses OpenAI to generate realistic student responses:
+- Uses `chatbot.py` to wrap OpenAI API calls
+- Accepts teacher utterance, slide context, student profile
+- Generates **student persona responses** (not teaching feedback) - questions, confusion, understanding, engagement
+- Prompt engineering creates authentic student behaviors based on:
+  - Grade level (elementary student vs college student language)
+  - Understanding level (struggling students need more help, gifted students ask deeper questions)
+  - Learning style (some prefer examples, others prefer step-by-step)
+  - Personality (curious students ask many questions, quiet students speak less, distracted students lose focus)
 
 ### State Management Best Practices
 - **Backend**: Keep endpoints pure functions—no global state, no sessions

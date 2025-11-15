@@ -1,6 +1,13 @@
 // src/SlideViewer.tsx
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import AudioRecorder from "./AudioRecorder";
+
+// Allow overriding API base (useful when serving built files without Vite proxy)
+const API_BASE =
+  (import.meta as any)?.env?.VITE_API_URL && (import.meta as any).env.VITE_API_URL !== "undefined"
+    ? (import.meta as any).env.VITE_API_URL
+    : "";
 
 interface Slide {
   id: number;
@@ -80,9 +87,8 @@ const SlideViewer: React.FC = () => {
     setCurrentSlideIndex((prev) => (prev > 0 ? prev - 1 : prev));
   };
 
-  const handleSendChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = chatInput.trim();
+  const sendMessageToBackend = async (text: string) => {
+    const trimmed = text.trim();
     if (!trimmed) return;
 
     const userMessage: ChatMessage = {
@@ -91,30 +97,12 @@ const SlideViewer: React.FC = () => {
       text: trimmed,
     };
     setMessages((prev) => [...prev, userMessage]);
-    setChatInput("");
 
-    // Call backend feedback endpoint
+    // Call backend feedback endpoint (minimal payload; backend acks only)
     try {
-      const settingsRaw = localStorage.getItem("student_settings");
-      const student_profile = settingsRaw
-        ? JSON.parse(settingsRaw)
-        : {
-            grade_level: "college-intro",
-            subject: "general",
-            understanding_level: "on-level",
-            explanation_style: "step-by-step",
-            student_persona: "curious",
-          };
-
       const payload = {
         teacher_text: trimmed,
         slide_index: currentSlideIndex,
-        slide_text: undefined,
-        student_profile,
-        history: messages.map((m) => ({
-          sender: m.sender,
-          text: m.text,
-        })),
       };
       const res = await fetch("/api/feedback", {
         method: "POST",
@@ -122,24 +110,35 @@ const SlideViewer: React.FC = () => {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Feedback request failed");
-      const data = await res.json();
-      const replyText: string = data.student_feedback || "Okay.";
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, sender: "assistant", text: replyText },
-      ]);
-    } catch (err) {
-      console.error(err);
+      const data: { student_feedback?: string } = await res.json();
+      const assistantText =
+        typeof data?.student_feedback === "string" && data.student_feedback.trim().length > 0
+          ? data.student_feedback
+          : "Transcript sent to backend.";
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "assistant",
-          text:
-            "I had trouble generating feedback just now. Please try again in a moment.",
+          text: assistantText,
         },
       ]);
+    } catch (err) {
+      console.error(err);
+      // Optionally show transient error in UI; skipping assistant message
     }
+  };
+
+  const handleTranscriptComplete = async (text: string) => {
+    // When audio recording finishes, automatically send to backend
+    console.log("[Audio] transcript complete, length:", text?.length || 0);
+    await sendMessageToBackend(text);
+  };
+
+  const handleSendChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendMessageToBackend(chatInput);
+    setChatInput("");
   };
 
   if (loadingSlides) {
@@ -378,6 +377,16 @@ const SlideViewer: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Audio Recorder */}
+          <div
+            style={{
+              borderTop: "1px solid rgba(148,163,184,0.4)",
+              padding: "8px 8px 0px 8px",
+            }}
+          >
+            <AudioRecorder onTranscriptComplete={handleTranscriptComplete} />
           </div>
 
           {/* Chat input */}

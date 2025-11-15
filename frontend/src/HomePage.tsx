@@ -232,15 +232,20 @@ const HomePage: React.FC = () => {
       formData.append("explanationStyle", explanationStyle);
       formData.append("studentPersona", studentPersona);
 
-      // swap to real backend later
-      // const res = await fetch("http://localhost:8000/api/upload", {
-      //   method: "POST",
-      //   body: formData,
-      // });
-      // if (!res.ok) throw new Error("Upload failed");
-      // const data = await res.json();
-      // const presentationId = data.presentationId as string;
-      const presentationId = "demo";
+      // Call real backend upload endpoint
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+
+      // Persist slides for viewer (stateless backend expects local storage)
+      // data.slides: Array<{ index: number; image_url: string; s3_url?: string }>
+      localStorage.setItem("slides", JSON.stringify(data.slides || []));
+
+      // Generate a simple client-side presentation id (viewer doesn't use it to fetch)
+      const presentationId = String(Date.now());
 
       console.log("Submitted with:", {
         file,

@@ -2,10 +2,12 @@
 
 ## Overview
 
-A React + TypeScript frontend interacts with a stateless FastAPI
-backend.\
-Teachers upload a PowerPoint/PDF, customize student profiles, speak
-during a simulated lesson, and receive AI-generated feedback.\
+A React + TypeScript frontend interacts with a stateless FastAPI backend.
+
+**This is a teacher practice tool**: Teachers upload PowerPoint/PDF slides, configure a simulated student profile, and practice teaching by speaking to the slides. The AI **roleplays as a student** - asking questions, expressing confusion or understanding, and responding based on the configured student characteristics (grade level, understanding level, learning style, personality).
+
+Teachers use **voice recording** to speak during their lesson. The browser transcribes speech to text, and the backend generates realistic student responses via OpenAI.
+
 The backend stores only slide images on disk---**no session data**.
 
 ## High-Level Flow
@@ -32,27 +34,33 @@ The backend stores only slide images on disk---**no session data**.
     -   Frontend stores the response locally.
 2.  **Teaching Simulation (Stateless)**
     -   Frontend handles:
+        -   current slide index
+        -   student profile configuration
+        -   conversation history (teacher speech + student responses)
+        -   **voice recording and speech-to-text transcription** (Web Speech API)
 
-        -   current slide index\
-        -   student profile\
-        -   conversation history\
-        -   teacher speech transcription\
+    -   Teacher clicks record button, speaks, clicks stop
 
-    -   On each teacher utterance, frontend calls `/feedback` with:
+    -   Speech is transcribed to text automatically in the browser
+
+    -   Frontend calls `/feedback` with:
 
         ``` json
         {
-          "teacher_text": "...",
-          "slide_index": 1,
-          "slide_text": "...optional text...",
-          "student_profile": {...},
-          "history": [...]
+          "teacher_text": "transcribed teacher speech",
+          "slide_index": 1
         }
         ```
 
-    -   Backend generates student-like feedback via LLM.
+        (Minimal implementation; full version would include `student_profile` and `history`)
 
-    -   Backend stores nothing about the interaction.
+    -   Backend generates **student persona responses** via OpenAI LLM
+        - Not teaching feedback, but authentic student reactions
+        - Based on configured grade level, understanding level, learning style, personality
+
+    -   Student response appears in chat interface
+
+    -   Backend stores nothing about the interaction
 3.  **Next Slide**
     -   Frontend updates local state only.
     -   No backend call required.
@@ -85,16 +93,22 @@ The backend stores only slide images on disk---**no session data**.
 
 #### `POST /feedback`
 
--   Accepts teacher_text, slide_index, slide_text (optional),
-    student_profile, and history
+-   Accepts minimal payload: `teacher_text` (transcribed speech) and `slide_index`
+    - Full implementation would include `student_profile` and `history` for context
 
--   Calls LLM engine with prompt template
+-   Calls OpenAI LLM with student persona prompt template
+
+-   Generates **realistic student responses** (questions, confusion, understanding, engagement)
+    - NOT teaching feedback or evaluation
+    - Authentic student behavior based on profile
 
 -   Returns JSON:
 
     ``` json
-    {"student_feedback": "..."}
+    {"status": "received"}
     ```
+
+    (Will be `{"student_feedback": "..."}` when fully integrated)
 
 #### `POST /settings`
 
@@ -134,15 +148,19 @@ app.mount("/images", StaticFiles(directory="data/images"), name="images")
 
 -   Upload file → receive slide URLs
 -   Maintain local state:
-    -   upload_id\
-    -   slides array\
-    -   currentSlideIndex\
-    -   studentProfile\
-    -   conversationHistory\
--   Handle audio → text transcription
--   Send feedback requests to backend
+    -   upload_id
+    -   slides array
+    -   currentSlideIndex
+    -   studentProfile (grade, subject, understanding level, learning style, persona)
+    -   conversationHistory (teacher utterances + student responses)
+-   **Voice recording and speech-to-text** using Web Speech API
+    -   AudioRecorder component handles recording start/stop
+    -   Browser's native speech recognition transcribes audio
+    -   Automatic submission to `/feedback` when recording stops
+-   Send feedback requests to backend with transcribed teacher speech
 -   Display slide images (via image URLs)
--   No backend session required
+-   Show simulated student responses in chat interface
+-   No backend session required - frontend is source of truth
 
 ### API Calls
 
