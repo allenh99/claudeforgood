@@ -1,13 +1,15 @@
 from .chatbot import Chatbot
 
-database_file = "backend/data/history.txt"
+database_file = "backend/history.txt"
 context_file  = "backend/context.txt"
-
+# Necessary context keys: <persona>, <grade>, <subject>, <level>, <style>
 
 # Clears all conversation history
-def begin_conversation():
+def begin_conversation(settings):
     with open(context_file, 'r') as f:
         context = f.read()
+        for key in settings.keys():
+            context.replace(key, settings[key])
     with open(database_file, 'w') as f:
         f.write(f"system:::{context}\n")
 
@@ -27,14 +29,10 @@ def get_feedback(user_text):
                 break
             role, content = c.split(':::')
             if role in ["system", "user", "assistant"]:
-                conversation.append({
-                    "role"      : role,
-                    "content"   : content
-                })
+                conversation.append((role, content))
             else:
-                conversation.append({
-                    "role"      : "user",
-                    "content"   : [
+                conversation.append((
+                    "user", [
                         {
                             "type" : "image_url",
                             "image_url" : {
@@ -43,8 +41,8 @@ def get_feedback(user_text):
                             }
                         }
                     ]
-                })
-        conversation.append({"role" : "user", "content" : user_text})
+                ))
+        conversation.append(("user", user_text))
 
         chatbot = Chatbot()
         response = chatbot.response(conversation)
