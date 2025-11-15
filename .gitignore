@@ -7,6 +7,8 @@ backend/.env
 
 # Virtual environments
 venv
+backend/__pycache__
+*test.py
 .venv
 backend/.venv
 
