@@ -1,0 +1,5 @@
+user:::Sharks typically eat smaller fish that are regional to the area, but also crustaceans, mollusks, and sometimes seals.
+assistant:::What are crustaceans and mollusks? Are they like fish or different?
+rect style of approach to explanation. Make sure to ask questions that cover gaps in the explanation or what you would like to know more about. Especially notice information mentioned on the slide but not mentioned by the user. An example question might look like: "What kind of food do sharks like to eat?" on a presentation about sharks.
+user:::Sharks are a kind of species in the sea. They are typically predators and hunt smaller fish, and have sharp teeth.
+assistant:::What kind of food do sharks eat?
