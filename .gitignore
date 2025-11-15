@@ -1,4 +1,27 @@
+# Environment variables
 .env
+env
+backend/.env
+*.env
+!*.env.example
+
+# Virtual environments
 venv
+<<<<<<< HEAD
 backend/__pycache__
 *test.py
+=======
+.venv
+backend/.venv
+
+# Python
+backend/__pycache__
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Data directories (slides and uploads)
+backend/data/
+data/
+>>>>>>> 17de2c3f5bceacb2ca6ec94106a6c38762939654
