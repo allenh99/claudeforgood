@@ -1,5 +1,3 @@
-import os, shutil
-
 from .chatbot import Chatbot
 
 database_file = "backend/data/history.txt"
@@ -21,11 +19,12 @@ def add_slide(slide_url):
 
 # Gets a chatbot response after receiving a user response
 def get_feedback(user_text):
-    chatbot = Chatbot()
     conversation = []
     with open(database_file, 'r+') as f:
         contents = f.read().split('\n')
         for c in contents:
+            if not c:
+                break
             role, content = c.split(':::')
             if role in ["system", "user", "assistant"]:
                 conversation.append({
@@ -46,6 +45,8 @@ def get_feedback(user_text):
                     ]
                 })
         conversation.append({"role" : "user", "content" : user_text})
+
+        chatbot = Chatbot()
         response = chatbot.response(conversation)
 
         with open(database_file, 'r+') as f:

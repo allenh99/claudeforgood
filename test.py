@@ -1,3 +1,3 @@
-from backend.workflow import reset_data
+from backend.workflow import get_feedback
 
-reset_data()
+get_feedback('hello')
