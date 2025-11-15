@@ -8,6 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import shutil
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from app.api import upload
 
