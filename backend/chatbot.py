@@ -1,8 +1,10 @@
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
 
 class Chatbot:
     def __init__(self):
+        load_dotenv()
         self.client = OpenAI()
         self.model_version = os.getenv("OPENAI_MODEL")
 
