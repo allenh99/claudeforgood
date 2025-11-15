@@ -1,5 +1,0 @@
-system:::hi
-user:::hello
-assistant:::hi
-user:::hello
-assistant:::hi
