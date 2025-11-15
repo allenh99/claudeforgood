@@ -2,39 +2,212 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// Option definitions
+const gradeLevelOptions = [
+  { value: "elementary", label: "Elementary" },
+  { value: "middle", label: "Middle school" },
+  { value: "high-standard", label: "High school" },
+  { value: "high-ap", label: "High school (AP / IB)" },
+  { value: "college-intro", label: "College intro" },
+  { value: "college-advanced", label: "College advanced" },
+];
+
+const subjectOptions = [
+  { value: "general", label: "General / mixed" },
+  { value: "math", label: "Math" },
+  { value: "science", label: "Science" },
+  { value: "history", label: "History / Social Studies" },
+  { value: "english", label: "English / ELA" },
+  { value: "cs", label: "Computer Science" },
+  { value: "economics", label: "Economics" },
+];
+
+const studentLevelOptions = [
+  { value: "struggling", label: "Struggling" },
+  { value: "approaching", label: "Approaching grade level" },
+  { value: "on-level", label: "On grade level" },
+  { value: "advanced", label: "Advanced" },
+  { value: "gifted", label: "Gifted" },
+];
+
+const explanationStyleOptions = [
+  { value: "concise", label: "Concise summary" },
+  { value: "step-by-step", label: "Step-by-step reasoning" },
+  { value: "examples", label: "Examples-based" },
+  { value: "analogy", label: "Metaphor / analogy" },
+  { value: "socratic", label: "Socratic (guided questions)" },
+];
+
+const studentPersonaOptions = [
+  { value: "curious", label: "Curious, asks many questions" },
+  { value: "quiet", label: "Quiet, needs prompting" },
+  { value: "distracted", label: "Distracted, loses the thread" },
+  { value: "confident", label: "Confident, sometimes overestimates" },
+  { value: "skeptical", label: "Skeptical, challenges assumptions" },
+];
+
+// helper to cycle through options
+function cycleOption(
+  currentValue: string,
+  options: { value: string; label: string }[],
+  direction: "prev" | "next"
+): string {
+  const idx = options.findIndex((o) => o.value === currentValue);
+  if (idx === -1) return options[0].value;
+  if (direction === "next") {
+    return options[(idx + 1) % options.length].value;
+  }
+  return options[(idx - 1 + options.length) % options.length].value;
+}
+
+interface RotatingSelectorProps {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (newValue: string) => void;
+}
+
+const RotatingSelector: React.FC<RotatingSelectorProps> = ({
+  label,
+  value,
+  options,
+  onChange,
+}) => {
+  const current = options.find((o) => o.value === value) ?? options[0];
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 22,
+        fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      }}
+    >
+      {/* Left label */}
+      <div
+        style={{
+          fontWeight: 600,
+          fontSize: 15,
+          color: "#111827",
+          marginRight: 16,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </div>
+
+      {/* Selector pill */}
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 10,
+          borderRadius: 9999,
+          border: "1px solid #c4b5fd",
+          background: "#eef2ff",
+          padding: "6px 14px",
+          minWidth: 280,
+          justifyContent: "space-between",
+        }}
+      >
+        {/* Left arrow */}
+        <button
+          type="button"
+          onClick={() => onChange(cycleOption(value, options, "prev"))}
+          style={{
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            padding: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          aria-label="Previous option"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#4f46e5"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+
+        {/* Current value */}
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 500,
+            color: "#1f2937",
+            textAlign: "center",
+            flexGrow: 1,
+            fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          }}
+        >
+          {current.label}
+        </span>
+
+        {/* Right arrow */}
+        <button
+          type="button"
+          onClick={() => onChange(cycleOption(value, options, "next"))}
+          style={{
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            padding: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          aria-label="Next option"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#4f46e5"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const HomePage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
 
-  // New student simulation settings
+  // still sending these if you want them on backend
+  const [presentationMode] = useState<string>("teacher");
+  const [aiDetailLevel] = useState<string>("concise");
+  const [theme] = useState<string>("light");
+
+  // student simulation settings
   const [gradeLevel, setGradeLevel] = useState<string>("college-intro");
   const [subject, setSubject] = useState<string>("general");
   const [studentLevel, setStudentLevel] = useState<string>("on-level");
-  const [explanationStyle, setExplanationStyle] = useState<string>("step-by-step");
+  const [explanationStyle, setExplanationStyle] =
+    useState<string>("step-by-step");
   const [studentPersona, setStudentPersona] = useState<string>("curious");
 
   const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const uploaded = e.target.files?.[0];
-    if (!uploaded) return;
-
-    const name = uploaded.name.toLowerCase();
-    const isPdf = uploaded.type === "application/pdf" || name.endsWith(".pdf");
-    const isPptx =
-      uploaded.type ===
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-      name.endsWith(".pptx");
-    const isPpt =
-      uploaded.type === "application/vnd.ms-powerpoint" || name.endsWith(".ppt");
-
-    if (!isPdf && !isPptx && !isPpt) {
-      alert("Please upload a PDF or PowerPoint (.pptx / .ppt) file.");
-      return;
-    }
-
-    setFile(uploaded);
-  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -46,39 +219,39 @@ const HomePage: React.FC = () => {
     setLoading(true);
 
     try {
-      // 1) Save settings to backend (stateless file)
-      const settingsPayload = {
-        grade_level: gradeLevel,
-        subject,
-        understanding_level: studentLevel,
-        explanation_style: explanationStyle,
-        student_persona: studentPersona,
-      };
-      const settingsRes = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settingsPayload),
-      });
-      if (!settingsRes.ok) {
-        throw new Error("Failed to save settings");
-      }
-      // Persist settings locally for the viewer
-      localStorage.setItem("student_settings", JSON.stringify(settingsPayload));
-
-      // 2) Upload slides to backend
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!uploadRes.ok) throw new Error("Upload failed");
-      const uploadData = await uploadRes.json();
 
-      // 3) Store slides locally and go to viewer
-      // uploadData.slides: [{ index, image_url, s3_url? }]
-      localStorage.setItem("slides", JSON.stringify(uploadData.slides || []));
-      navigate(`/viewer/session`);
+      formData.append("presentationMode", presentationMode);
+      formData.append("aiDetailLevel", aiDetailLevel);
+      formData.append("theme", theme);
+
+      formData.append("gradeLevel", gradeLevel);
+      formData.append("subject", subject);
+      formData.append("studentLevel", studentLevel);
+      formData.append("explanationStyle", explanationStyle);
+      formData.append("studentPersona", studentPersona);
+
+      // swap to real backend later
+      // const res = await fetch("http://localhost:8000/api/upload", {
+      //   method: "POST",
+      //   body: formData,
+      // });
+      // if (!res.ok) throw new Error("Upload failed");
+      // const data = await res.json();
+      // const presentationId = data.presentationId as string;
+      const presentationId = "demo";
+
+      console.log("Submitted with:", {
+        file,
+        gradeLevel,
+        subject,
+        studentLevel,
+        explanationStyle,
+        studentPersona,
+      });
+
+      navigate(`/viewer/${presentationId}`);
     } catch (err) {
       console.error(err);
       alert("Something went wrong while processing your PDF.");
@@ -95,16 +268,16 @@ const HomePage: React.FC = () => {
         justifyContent: "center",
         alignItems: "center",
         background: "#f5f5f7",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
       <div
         style={{
           width: "100%",
-          maxWidth: 780,
+          maxWidth: 820,
           background: "#ffffff",
-          borderRadius: 12,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+          borderRadius: 16,
+          boxShadow: "0 12px 35px rgba(0,0,0,0.08)",
           padding: 32,
         }}
       >
@@ -115,170 +288,214 @@ const HomePage: React.FC = () => {
         </p>
 
         <form onSubmit={handleSubmit}>
-          {/* PDF upload */}
-          <div style={{ marginBottom: 24 }}>
+          {/* PDF upload card */}
+          <div style={{ marginBottom: 32 }}>
             <label
-              htmlFor="pdf-file"
               style={{
                 display: "block",
                 fontWeight: 600,
-                marginBottom: 8,
+                marginBottom: 12,
+                fontSize: 20,
+                textAlign: "center",
               }}
             >
-              PDF file
+              Add document
             </label>
+
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const dropped = e.dataTransfer.files?.[0];
+                if (!dropped) return;
+                if (dropped.type !== "application/pdf") {
+                  alert("Only PDF files are allowed.");
+                  return;
+                }
+                setFile(dropped);
+              }}
+              style={{
+                border: "2px dashed #d1d5db",
+                borderRadius: 12,
+                padding: "40px 24px",
+                textAlign: "center",
+                background: "#fafafa",
+                cursor: "pointer",
+              }}
+              onClick={() => document.getElementById("pdf-file")?.click()}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: "#e6f4ea",
+                  margin: "0 auto 16px auto",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="28"
+                  height="28"
+                  fill="#3b7f4a"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 3l4 4h-3v6h-2V7H8l4-4zm-7 14v2h14v-2h2v4H3v-4h2z" />
+                </svg>
+              </div>
+
+              <div style={{ fontSize: 16 }}>
+                <span
+                  style={{
+                    color: "#2563eb",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                  }}
+                >
+                  Upload a file
+                </span>{" "}
+                or drag and drop
+              </div>
+
+              <div
+                style={{
+                  marginTop: 10,
+                  fontSize: 14,
+                  color: "#6b7280",
+                }}
+              >
+                Acceptable file type: <strong>.pdf</strong>, up to 5MB
+              </div>
+            </div>
+
             <input
               id="pdf-file"
               type="file"
-              accept="application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint"
-              onChange={handleFileChange}
+              accept="application/pdf"
+              onChange={(e) => {
+                const uploaded = e.target.files?.[0];
+                if (!uploaded) return;
+                if (uploaded.type !== "application/pdf") {
+                  alert("Please upload a PDF file.");
+                  return;
+                }
+                setFile(uploaded);
+              }}
+              style={{ display: "none" }}
             />
+
             {file && (
-              <p style={{ marginTop: 8, fontSize: 14, color: "#444" }}>
+              <p style={{ marginTop: 12, fontSize: 15, color: "#374151" }}>
                 Selected: <strong>{file.name}</strong>
               </p>
             )}
           </div>
 
-          {/* Student simulation settings section */}
-          <h3 style={{ marginBottom: 8, marginTop: 8 }}>Student simulation</h3>
-
-          {/* Grade level */}
-          <div style={{ marginBottom: 16 }}>
-            <label
-              htmlFor="grade-level"
-              style={{ display: "block", fontWeight: 600, marginBottom: 6 }}
+          {/* Student simulation card */}
+          <div
+            style={{
+              border: "2px dashed #c4b5fd",
+              borderRadius: 12,
+              padding: "20px 18px",
+              background: "#f5f3ff",
+              marginBottom: 24,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: 18,
+                gap: 10,
+              }}
             >
-              Grade level
-            </label>
-            <select
-              id="grade-level"
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: "#e0e7ff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#4f46e5"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="7" r="4" />
+                  <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                </svg>
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 16,
+                    color: "#111827",
+                    fontFamily:
+                      "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+                  }}
+                >
+                  Student simulation
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "#6b7280",
+                  }}
+                >
+                  Cycle through different student profiles with the arrows.
+                </div>
+              </div>
+            </div>
+
+            <RotatingSelector
+              label="Grade level"
               value={gradeLevel}
-              onChange={(e) => setGradeLevel(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: 6,
-                border: "1px solid #ccc",
-              }}
-            >
-              <option value="elementary">Elementary</option>
-              <option value="middle">Middle school</option>
-              <option value="high-standard">High school</option>
-              <option value="high-ap">High school (AP / IB)</option>
-              <option value="college-intro">College intro</option>
-              <option value="college-advanced">College advanced</option>
-            </select>
-          </div>
+              options={gradeLevelOptions}
+              onChange={setGradeLevel}
+            />
 
-          {/* Subject */}
-          <div style={{ marginBottom: 16 }}>
-            <label
-              htmlFor="subject"
-              style={{ display: "block", fontWeight: 600, marginBottom: 6 }}
-            >
-              Subject
-            </label>
-            <select
-              id="subject"
+            <RotatingSelector
+              label="Subject"
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: 6,
-                border: "1px solid #ccc",
-              }}
-            >
-              <option value="general">General / mixed</option>
-              <option value="math">Math</option>
-              <option value="science">Science</option>
-              <option value="history">History / Social Studies</option>
-              <option value="english">English / ELA</option>
-              <option value="cs">Computer Science</option>
-              <option value="economics">Economics</option>
-            </select>
-          </div>
+              options={subjectOptions}
+              onChange={setSubject}
+            />
 
-          {/* Student understanding level */}
-          <div style={{ marginBottom: 16 }}>
-            <label
-              htmlFor="student-level"
-              style={{ display: "block", fontWeight: 600, marginBottom: 6 }}
-            >
-              Student understanding level
-            </label>
-            <select
-              id="student-level"
+            <RotatingSelector
+              label="Student understanding level"
               value={studentLevel}
-              onChange={(e) => setStudentLevel(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: 6,
-                border: "1px solid #ccc",
-              }}
-            >
-              <option value="struggling">Struggling</option>
-              <option value="approaching">Approaching grade level</option>
-              <option value="on-level">On grade level</option>
-              <option value="advanced">Advanced</option>
-              <option value="gifted">Gifted</option>
-            </select>
-          </div>
+              options={studentLevelOptions}
+              onChange={setStudentLevel}
+            />
 
-          {/* Explanation style */}
-          <div style={{ marginBottom: 16 }}>
-            <label
-              htmlFor="explanation-style"
-              style={{ display: "block", fontWeight: 600, marginBottom: 6 }}
-            >
-              Explanation style
-            </label>
-            <select
-              id="explanation-style"
+            <RotatingSelector
+              label="Explanation style"
               value={explanationStyle}
-              onChange={(e) => setExplanationStyle(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: 6,
-                border: "1px solid #ccc",
-              }}
-            >
-              <option value="concise">Concise summary</option>
-              <option value="step-by-step">Step-by-step reasoning</option>
-              <option value="examples">Examples-based</option>
-              <option value="analogy">Metaphor / analogy</option>
-              <option value="socratic">Socratic (guided questions)</option>
-            </select>
-          </div>
+              options={explanationStyleOptions}
+              onChange={setExplanationStyle}
+            />
 
-          {/* Student persona */}
-          <div style={{ marginBottom: 24 }}>
-            <label
-              htmlFor="student-persona"
-              style={{ display: "block", fontWeight: 600, marginBottom: 6 }}
-            >
-              Student persona
-            </label>
-            <select
-              id="student-persona"
+            <RotatingSelector
+              label="Student persona"
               value={studentPersona}
-              onChange={(e) => setStudentPersona(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: 6,
-                border: "1px solid #ccc",
-              }}
-            >
-              <option value="curious">Curious, asks many questions</option>
-              <option value="quiet">Quiet, needs prompting</option>
-              <option value="distracted">Distracted, loses the thread</option>
-              <option value="confident">Confident, sometimes overestimates understanding</option>
-              <option value="skeptical">Skeptical, challenges assumptions</option>
-            </select>
+              options={studentPersonaOptions}
+              onChange={setStudentPersona}
+            />
           </div>
 
           <button
@@ -293,6 +510,8 @@ const HomePage: React.FC = () => {
               color: "#fff",
               fontWeight: 600,
               cursor: loading ? "default" : "pointer",
+              fontFamily:
+                "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
             }}
           >
             {loading ? "Processing..." : "Continue to slide viewer"}
