@@ -7,10 +7,8 @@ backend/.env
 
 # Virtual environments
 venv
-<<<<<<< HEAD
 backend/__pycache__
 *test.py
-=======
 .venv
 backend/.venv
 
@@ -24,4 +22,28 @@ __pycache__
 # Data directories (slides and uploads)
 backend/data/
 data/
->>>>>>> 17de2c3f5bceacb2ca6ec94106a6c38762939654
+backend/.venv
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+dist/
+dist-ssr/
+*.local
+
+.vite/
+vite.config.ts.timestamp-*
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
+
+logs/
+*.log
+*.trace
