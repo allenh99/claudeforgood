@@ -34,7 +34,7 @@ const SlideViewer: React.FC = () => {
     {
       id: 1,
       sender: "assistant",
-      text: "Hi! Ask me anything about this slide.",
+      text: "Tell me about the slide!",
     },
   ]);
   const [chatInput, setChatInput] = useState<string>("");
@@ -174,8 +174,9 @@ const SlideViewer: React.FC = () => {
 
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
-    await sendMessageToBackend(chatInput);
+    const toSend = chatInput;
     setChatInput("");
+    await sendMessageToBackend(toSend);
   };
 
   if (loadingSlides) {
@@ -334,15 +335,15 @@ const SlideViewer: React.FC = () => {
           {isLlmLoading && (
             <div
               style={{
-                width: 180,
-                height: 110,
-                borderRadius: 18,
+                width: 72,
+                height: 44,
+                borderRadius: 10,
                 backgroundColor: "rgba(15,23,42,0.95)",
                 boxShadow: "0 12px 35px rgba(0,0,0,0.8)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: 8,
+                padding: 6,
               }}
             >
               <video
@@ -354,7 +355,7 @@ const SlideViewer: React.FC = () => {
                 style={{
                   width: "100%",
                   height: "auto",
-                  borderRadius: 12,
+                  borderRadius: 8,
                 }}
               />
             </div>

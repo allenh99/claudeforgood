@@ -184,7 +184,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscriptComplete }) =
               gap: 6,
             }}
           >
-            <span style={{ fontSize: 16 }}>🎤</span>
+            <span style={{ fontSize: 16 }}></span>
             Start Recording
           </button>
         ) : (

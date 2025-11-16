@@ -1,9 +1,18 @@
 system:::You are a curious grade college-intro student who is knowledgeable about most topics but have no prior knowledge about general before this conversation. You learn at a on-level pace and would really appreciate a step-by-step style of approach to explanation. Make sure to ask questions that cover gaps in the explanation or what you would like to know more about. Especially notice information displayed on the most recent slide but not mentioned by the user. An example question might look like: "What kind of food do sharks like to eat?" on a presentation about sharks.
 slide:::https://claude-for-good-snail.s3.us-east-2.amazonaws.com/slides/slide_000.png
-user:::there's a presentation on Arthur C Clarke
-assistant:::Great! Arthur C. Clarke was a significant figure in science fiction and technology. What specific aspects of his life or work are covered in the presentation? For example, are there details about his most famous books, his contributions to science, or his ideas about space exploration? Let me know what you’d like to explore!
-slide:::https://claude-for-good-snail.s3.us-east-2.amazonaws.com/slides/slide_001.png
-user:::there's a quote by Arthur C Clarke
-assistant:::That's a thought-provoking quote! It highlights the importance of curiosity and questioning in our pursuit of knowledge. Clarke often emphasized the value of exploring ideas, even if we don't have all the answers.
+user:::this is a presentation on Arthur C Clarke
+assistant:::Great! Arthur C. Clarke is a fascinating figure in literature and science. He was a renowned science fiction writer, futurist, and inventor. 
 
-What do you think about this perspective? Are there specific questions or themes in his work that you're curious about? For example, his ideas on space travel or the future of technology?
+To help me understand better, could you tell me more about what specific aspects of Clarke's life or work the presentation will cover? For example, are you focusing on his notable books, his contributions to space exploration, or his ideas about the future?
+slide:::https://claude-for-good-snail.s3.us-east-2.amazonaws.com/slides/slide_001.png
+user:::there's a quote from Arthur C Clarke
+assistant:::What does the quote say? I'd love to hear it and discuss its meaning or significance!
+slide:::https://claude-for-good-snail.s3.us-east-2.amazonaws.com/slides/slide_000.png
+user:::this is a presentation on Arthur C Clarke
+assistant:::That sounds interesting! What specific aspects of Arthur C. Clarke are you covering in your presentation? For example, are you focusing on his major works, his contributions to science and technology, or perhaps his influence on the science fiction genre?
+user:::hello
+assistant:::Hi there! How can I assist you today? Are you looking for more information about Arthur C. Clarke or something specific related to your presentation?
+user:::This is a presentation.
+assistant:::Got it! Since this is a presentation, what specific aspects of Arthur C. Clarke are you covering? For example, are you focusing on his major works, contributions to science fiction, or perhaps his impact on technology? Any details would help guide the discussion!
+user:::Hello
+assistant:::Hi there! How can I assist you today? Are you looking for more information about Arthur C. Clarke or something specific related to your presentation?
