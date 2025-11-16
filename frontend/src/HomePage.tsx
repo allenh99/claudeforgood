@@ -1,8 +1,6 @@
-// src/HomePage.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Option definitions
 const gradeLevelOptions = [
   { value: "elementary", label: "Elementary" },
   { value: "middle", label: "Middle school" },
@@ -82,7 +80,7 @@ const RotatingSelector: React.FC<RotatingSelectorProps> = ({
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 22,
-        fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
       {/* Left label */}
@@ -150,7 +148,7 @@ const RotatingSelector: React.FC<RotatingSelectorProps> = ({
             color: "#1f2937",
             textAlign: "center",
             flexGrow: 1,
-            fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+            fontFamily: "'Inter', system-ui, sans-serif",
           }}
         >
           {current.label}
@@ -191,6 +189,8 @@ const RotatingSelector: React.FC<RotatingSelectorProps> = ({
 };
 
 const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+
   const [file, setFile] = useState<File | null>(null);
 
   // still sending these if you want them on backend
@@ -207,7 +207,18 @@ const HomePage: React.FC = () => {
   const [studentPersona, setStudentPersona] = useState<string>("curious");
 
   const [loading, setLoading] = useState<boolean>(false);
-  const navigate = useNavigate();
+
+  // ref for smooth scrolling to settings section
+  const settingsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (file && settingsRef.current) {
+      settingsRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [file]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -232,7 +243,6 @@ const HomePage: React.FC = () => {
       formData.append("explanationStyle", explanationStyle);
       formData.append("studentPersona", studentPersona);
 
-      // Call real backend upload endpoint
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -240,22 +250,10 @@ const HomePage: React.FC = () => {
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
 
-      // Persist slides for viewer (stateless backend expects local storage)
-      // data.slides: Array<{ index: number; image_url: string; s3_url?: string }>
+      // data.slides expected from backend
       localStorage.setItem("slides", JSON.stringify(data.slides || []));
 
-      // Generate a simple client-side presentation id (viewer doesn't use it to fetch)
       const presentationId = String(Date.now());
-
-      console.log("Submitted with:", {
-        file,
-        gradeLevel,
-        subject,
-        studentLevel,
-        explanationStyle,
-        studentPersona,
-      });
-
       navigate(`/viewer/${presentationId}`);
     } catch (err) {
       console.error(err);
@@ -273,7 +271,8 @@ const HomePage: React.FC = () => {
         justifyContent: "center",
         alignItems: "center",
         background: "#f5f5f7",
-        fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        padding: 20,
+        fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
       <div
@@ -286,10 +285,10 @@ const HomePage: React.FC = () => {
           padding: 32,
         }}
       >
-        <h1 style={{ marginBottom: 8 }}>Slide Companion</h1>
+        <h1 style={{ marginBottom: 8 }}>Teach the Snail</h1>
         <p style={{ marginTop: 0, marginBottom: 24, color: "#555" }}>
-          Upload a PDF and configure how the slide viewer and simulated student
-          should behave.
+          Upload your lecture in a PDF and customize a student profile to see
+          how they might learn from your material.
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -398,125 +397,139 @@ const HomePage: React.FC = () => {
                 Selected: <strong>{file.name}</strong>
               </p>
             )}
+
+            {!file && (
+              <p
+                style={{
+                  marginTop: 12,
+                  fontSize: 13,
+                  color: "#6b7280",
+                  textAlign: "center",
+                }}
+              >
+                Upload a PDF to unlock the student simulation settings.
+              </p>
+            )}
           </div>
 
-          {/* Student simulation card */}
-          <div
-            style={{
-              border: "2px dashed #c4b5fd",
-              borderRadius: 12,
-              padding: "20px 18px",
-              background: "#f5f3ff",
-              marginBottom: 24,
-            }}
-          >
+          {/* Student simulation card – only show AFTER a PDF is uploaded */}
+          {file && (
             <div
+              ref={settingsRef}
               style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: 18,
-                gap: 10,
+                border: "2px dashed #c4b5fd",
+                borderRadius: 12,
+                padding: "20px 18px",
+                background: "#f5f3ff",
+                marginBottom: 24,
               }}
             >
               <div
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: "50%",
-                  background: "#e0e7ff",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
+                  marginBottom: 18,
+                  gap: 10,
                 }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#4f46e5"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="7" r="4" />
-                  <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-                </svg>
-              </div>
-              <div>
                 <div
                   style={{
-                    fontWeight: 600,
-                    fontSize: 16,
-                    color: "#111827",
-                    fontFamily:
-                      "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    background: "#e0e7ff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  Student simulation
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#4f46e5"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="7" r="4" />
+                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                  </svg>
                 </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "#6b7280",
-                  }}
-                >
-                  Cycle through different student profiles with the arrows.
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 16,
+                      color: "#111827",
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                    }}
+                  >
+                    Student simulation
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "#6b7280",
+                    }}
+                  >
+                    Cycle through different student profiles with the arrows.
+                  </div>
                 </div>
               </div>
+
+              <RotatingSelector
+                label="Grade level"
+                value={gradeLevel}
+                options={gradeLevelOptions}
+                onChange={setGradeLevel}
+              />
+
+              <RotatingSelector
+                label="Subject"
+                value={subject}
+                options={subjectOptions}
+                onChange={setSubject}
+              />
+
+              <RotatingSelector
+                label="Student understanding level"
+                value={studentLevel}
+                options={studentLevelOptions}
+                onChange={setStudentLevel}
+              />
+
+              <RotatingSelector
+                label="Explanation style"
+                value={explanationStyle}
+                options={explanationStyleOptions}
+                onChange={setExplanationStyle}
+              />
+
+              <RotatingSelector
+                label="Student persona"
+                value={studentPersona}
+                options={studentPersonaOptions}
+                onChange={setStudentPersona}
+              />
             </div>
-
-            <RotatingSelector
-              label="Grade level"
-              value={gradeLevel}
-              options={gradeLevelOptions}
-              onChange={setGradeLevel}
-            />
-
-            <RotatingSelector
-              label="Subject"
-              value={subject}
-              options={subjectOptions}
-              onChange={setSubject}
-            />
-
-            <RotatingSelector
-              label="Student understanding level"
-              value={studentLevel}
-              options={studentLevelOptions}
-              onChange={setStudentLevel}
-            />
-
-            <RotatingSelector
-              label="Explanation style"
-              value={explanationStyle}
-              options={explanationStyleOptions}
-              onChange={setExplanationStyle}
-            />
-
-            <RotatingSelector
-              label="Student persona"
-              value={studentPersona}
-              options={studentPersonaOptions}
-              onChange={setStudentPersona}
-            />
-          </div>
+          )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !file}
             style={{
               width: "100%",
               padding: "10px 16px",
               borderRadius: 8,
               border: "none",
-              background: loading ? "#888" : "#2563eb",
+              background: loading || !file ? "#94a3b8" : "#2563eb",
               color: "#fff",
               fontWeight: 600,
-              cursor: loading ? "default" : "pointer",
-              fontFamily:
-                "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+              cursor: loading || !file ? "default" : "pointer",
+              fontFamily: "'Inter', system-ui, sans-serif",
             }}
           >
             {loading ? "Processing..." : "Continue to slide viewer"}
