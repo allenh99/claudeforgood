@@ -1,7 +1,13 @@
-from .chatbot import Chatbot
+import os
+import sys
+current_dir = os.path.dirname(__file__)
+utils_path = os.path.join(current_dir,'..','backend')
+sys.path.append(utils_path)
 
-database_file = "backend/history.txt"
-context_file  = "backend/context.txt"
+from chatbot import Chatbot
+
+database_file = "history.txt"
+context_file  = "context.txt"
 # Necessary context keys: <persona>, <grade>, <subject>, <level>, <style>
 
 # Clears all conversation history
@@ -9,15 +15,15 @@ def begin_conversation(settings):
     with open(context_file, 'r') as f:
         context = f.read()
         for key in settings.keys():
-            context.replace(key, settings[key])
-    with open(database_file, 'w') as f:
-        f.write(f"system:::{context}\n")
+            context = context.replace(key, settings[key])
+    with open(database_file, 'w') as g:
+        g.write(f"system:::{context}\n")
 
 # Adds a slide to the conversation
 def add_slide(slide_url):
-    image_file = f"slide_{str(slide_url).zfill(3)}"
+    image_file = f"{str(slide_url).zfill(3)}"
     with open(database_file, 'a') as f:
-        f.write(f"slide:::{image_file}\n")
+        f.write(f"slide:::{slide_url}\n")
 
 # Gets a chatbot response after receiving a user response
 def get_feedback(user_text):
@@ -48,7 +54,7 @@ def get_feedback(user_text):
         chatbot = Chatbot()
         response = chatbot.response(conversation)
 
-        with open(database_file, 'a') as f:
-            f.write(f"user:::{user_text}\n")
-            f.write(f"assistant:::{response}\n")
-        return response
+    with open(database_file, 'a') as g:
+        g.write(f"user:::{user_text}\n")
+        g.write(f"assistant:::{response}\n")
+    return response

@@ -12,6 +12,7 @@ const API_BASE =
 interface Slide {
   id: number;
   imageUrl: string;
+  s3Url?: string;
 }
 
 interface ChatMessage {
@@ -48,11 +49,12 @@ const SlideViewer: React.FC = () => {
           setError("No slide data found. Please upload a file first.");
           return;
         }
-        const storedSlides: Array<{ index: number; image_url: string }> =
+        const storedSlides: Array<{ index: number; image_url: string; s3_url?: string }> =
           JSON.parse(raw);
         const normalized: Slide[] = storedSlides.map((s, i) => ({
           id: i + 1,
           imageUrl: s.image_url,
+          s3Url: s.s3_url,
         }));
         if (normalized.length === 0) {
           setError("No slides were generated from your upload.");
@@ -72,6 +74,32 @@ const SlideViewer: React.FC = () => {
   }, [presentationId]);
 
   const currentSlide = slides[currentSlideIndex];
+
+  // Notify backend whenever the slide changes
+  useEffect(() => {
+    const notifySlideChange = async () => {
+      if (slides.length === 0) return;
+      const s3 = slides[currentSlideIndex]?.s3Url;
+      if (!s3) {
+        console.warn("Slide S3 URL missing; slide change not sent");
+        return;
+      }
+      try {
+        await fetch("/api/slide_change", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slide_index: currentSlideIndex,
+            slide_url: s3,
+          }),
+        });
+      } catch (e) {
+        // non-fatal
+        console.warn("Slide change notify failed", e);
+      }
+    };
+    notifySlideChange();
+  }, [currentSlideIndex, slides.length]);
 
   const handleToggleChat = () => {
     setIsChatOpen((prev) => !prev);
@@ -98,11 +126,16 @@ const SlideViewer: React.FC = () => {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Call backend feedback endpoint (minimal payload; backend acks only)
+    // Call backend feedback endpoint
     try {
+      const s3 = slides[currentSlideIndex]?.s3Url;
+      if (!s3) {
+        throw new Error("Current slide is missing S3 URL.");
+      }
       const payload = {
         teacher_text: trimmed,
         slide_index: currentSlideIndex,
+        slide_url: s3,
       };
       const res = await fetch("/api/feedback", {
         method: "POST",

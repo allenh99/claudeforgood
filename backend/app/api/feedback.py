@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from pathlib import Path
 from typing import Optional
 import json
+import os
+import sys
 
 # Chatbot wrapper (lives at backend/chatbot.py)
 # When running the FastAPI app (module 'app'), the parent directory is on sys.path
@@ -16,6 +18,14 @@ try:
 except Exception as e:
     Chatbot = None  # fallback for environments without OpenAI configured
 
+# Workflow loader for robust imports
+from app.core.workflow_loader import load_workflow_module
+#from ../../backend.workflow import get_feedback,add_slide,begin_conversation
+#from workflow import get_feedback,add_slide,begin_conversation
+current_dir = os.path.dirname(os.path.abspath(__file__))
+utils_path = os.path.join(current_dir, '..','..','..','backend')
+sys.path.append(utils_path)
+import workflow
 # Reuse the settings file path from the settings API
 from app.api.settings import SETTINGS_FILE
 
@@ -25,10 +35,20 @@ router = APIRouter()
 class FeedbackRequest(BaseModel):
     teacher_text: str
     slide_index: int
+    slide_url: Optional[str] = None
 
 
 class StudentFeedbackResponse(BaseModel):
     student_feedback: str
+ 
+ 
+class SlideChangeRequest(BaseModel):
+    slide_index: int
+    slide_url: Optional[str] = None
+ 
+ 
+class SlideChangeAck(BaseModel):
+    status: str
 
 
 @router.post("/feedback", response_model=StudentFeedbackResponse)
@@ -38,6 +58,8 @@ async def feedback(req: FeedbackRequest) -> StudentFeedbackResponse:
     simulated student response using the Chatbot with context from settings.
     """
     try:
+        # Load workflow module dynamically
+        wf = load_workflow_module()
         # 1) Load settings if present
         settings: Optional[dict] = None
         if SETTINGS_FILE.exists():
@@ -62,9 +84,10 @@ async def feedback(req: FeedbackRequest) -> StudentFeedbackResponse:
             else:
                 system_prompt = template
 
-        # 3) Construct slide image URL for current slide index
-        # Slides are served from /images/slide_{index:03d}.png
-        slide_url = f"/images/slide_{req.slide_index:03d}.png"
+        # 3) Require a public slide URL (e.g., S3); do not use local paths
+        if not req.slide_url or not isinstance(req.slide_url, str) or not req.slide_url.startswith(("http://", "https://")):
+            raise HTTPException(status_code=400, detail="slide_url is required and must be a publicly reachable URL (e.g., S3).")
+        slide_url = req.slide_url
 
         # 4) Compose conversation with system, slide image, and teacher text
         conversation = [
@@ -81,12 +104,29 @@ async def feedback(req: FeedbackRequest) -> StudentFeedbackResponse:
             ("user", req.teacher_text),
         ]
 
-        # 5) Call Chatbot
-        if Chatbot is None:
-            raise RuntimeError("Chatbot is not available (OpenAI client not initialized).")
-        bot = Chatbot()
-        reply = bot.response(conversation, temperature=0.7, max_tokens=300)
+        # 5) Generate response and update history using workflow.get_feedback
+        if wf is None or not hasattr(wf, "get_feedback"):
+            raise RuntimeError("workflow.get_feedback is not available.")
+        reply = wf.get_feedback(req.teacher_text)  # type: ignore
 
         return StudentFeedbackResponse(student_feedback=reply)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to receive feedback: {str(e)}")
+
+
+@router.post("/slide_change", response_model=SlideChangeAck)
+async def slide_change(req: SlideChangeRequest) -> SlideChangeAck:
+    """
+    Record the slide change in the conversation history (if stateful workflow is available).
+    """
+    try:
+        wf = load_workflow_module()
+        if not req.slide_url or not isinstance(req.slide_url, str) or not req.slide_url.startswith(("http://", "https://")):
+            raise HTTPException(status_code=400, detail="slide_url is required and must be a publicly reachable URL (e.g., S3).")
+        if wf and hasattr(wf, "add_slide"):
+            wf.add_slide(req.slide_url)  # type: ignore
+            return SlideChangeAck(status="ok")
+        # If workflow is not available, no-op but succeed
+        return SlideChangeAck(status="ignored")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to record slide change: {str(e)}")

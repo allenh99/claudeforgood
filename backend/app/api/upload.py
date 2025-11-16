@@ -2,7 +2,7 @@
 Upload API endpoint for handling slide file uploads.
 Converts PPTX/PDF files to PNG images and returns slide metadata.
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from pydantic import BaseModel
 from typing import List, Optional
 from pathlib import Path
@@ -11,6 +11,12 @@ import os
 
 from app.core.slide_converter import SlideConverter
 from app.core.s3_uploader import S3Uploader
+from app.core.context_helper import render_context_from_settings
+try:
+    from workflow import begin_conversation  # type: ignore
+except Exception:
+    begin_conversation = None  # gracefully handle absence in some envs
+from app.api.settings import save_settings, SettingsRequest  # type: ignore
 
 router = APIRouter()
 
@@ -47,7 +53,18 @@ class UploadResponse(BaseModel):
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_slides(file: UploadFile = File(...)):
+async def upload_slides(
+    file: UploadFile = File(...),
+    # Optional settings posted from the frontend form (camelCase keys)
+    presentationMode: Optional[str] = Form(default=None),
+    aiDetailLevel: Optional[str] = Form(default=None),
+    theme: Optional[str] = Form(default=None),
+    gradeLevel: Optional[str] = Form(default=None),
+    subject: Optional[str] = Form(default=None),
+    studentLevel: Optional[str] = Form(default=None),
+    explanationStyle: Optional[str] = Form(default=None),
+    studentPersona: Optional[str] = Form(default=None),
+):
     """
     Upload a PowerPoint (PPTX) or PDF file and convert it to slide images.
     Clears previous uploads and stores slides directly in data/images/.
@@ -126,6 +143,31 @@ async def upload_slides(file: UploadFile = File(...)):
             message += " (stored in S3)"
         else:
             message += " (stored locally only)"
+
+        # Save settings via the settings API and render context.txt, then seed conversation
+        settings_dict = {
+            "grade_level": gradeLevel or "",
+            "subject": subject or "",
+            "understanding_level": studentLevel or "",
+            "explanation_style": explanationStyle or "",
+            "student_persona": studentPersona or "",
+        }
+        try:
+            # Persist settings (equivalent to calling /api/settings)
+            await save_settings(SettingsRequest(**settings_dict))
+        except Exception as e:
+            print(f"Warning: saving settings failed: {e}")
+        try:
+            # Render the context template with current settings
+            render_context_from_settings(settings_dict)
+        except Exception as e:
+            print(f"Warning: rendering context failed: {e}")
+        try:
+            # Initialize the conversation history with the rendered context
+            if begin_conversation:
+                begin_conversation(settings_dict)
+        except Exception as e:
+            print(f"Warning: begin_conversation failed: {e}")
 
         return UploadResponse(
             slides=slides,

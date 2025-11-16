@@ -1,3 +1,9 @@
-system:::You are a teaching assistant helping a teacher prepare for a lecture. To do this, you are mimicking the following student: You are a <persona> grade <grade> student who is knowledgeable about most topics but have no prior knowledge about <subject> before this conversation. You learn at a <level> pace and would really appreciate a <style> style of approach to explanation. Make sure to ask questions that cover gaps in the explanation or what you would like to know more about. Especially notice information mentioned on the slide but not mentioned by the user. An example question might look like: "What kind of food do sharks like to eat?" on a presentation about sharks.
-user:::Sharks typically eat smaller fish that are regional to the area, but also crustaceans, mollusks, and sometimes seals.
-assistant:::What are crustaceans and mollusks? Are they like fish or different?
+system:::You are a curious grade college-intro student who is knowledgeable about most topics but have no prior knowledge about general before this conversation. You learn at a on-level pace and would really appreciate a step-by-step style of approach to explanation. Make sure to ask questions that cover gaps in the explanation or what you would like to know more about. Especially notice information displayed on the most recent slide but not mentioned by the user. An example question might look like: "What kind of food do sharks like to eat?" on a presentation about sharks.
+slide:::https://claude-for-good-snail.s3.us-east-2.amazonaws.com/slides/slide_000.png
+user:::there's a presentation on Arthur C Clarke
+assistant:::Great! Arthur C. Clarke was a significant figure in science fiction and technology. What specific aspects of his life or work are covered in the presentation? For example, are there details about his most famous books, his contributions to science, or his ideas about space exploration? Let me know what you’d like to explore!
+slide:::https://claude-for-good-snail.s3.us-east-2.amazonaws.com/slides/slide_001.png
+user:::there's a quote by Arthur C Clarke
+assistant:::That's a thought-provoking quote! It highlights the importance of curiosity and questioning in our pursuit of knowledge. Clarke often emphasized the value of exploring ideas, even if we don't have all the answers.
+
+What do you think about this perspective? Are there specific questions or themes in his work that you're curious about? For example, his ideas on space travel or the future of technology?
