@@ -38,6 +38,7 @@ const SlideViewer: React.FC = () => {
     },
   ]);
   const [chatInput, setChatInput] = useState<string>("");
+  const [isLlmLoading, setIsLlmLoading] = useState<boolean>(false);
 
   // Fetch slide data when the viewer loads
   useEffect(() => {
@@ -126,7 +127,8 @@ const SlideViewer: React.FC = () => {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Call backend feedback endpoint
+    setIsLlmLoading(true);
+
     try {
       const s3 = slides[currentSlideIndex]?.s3Url;
       if (!s3) {
@@ -137,7 +139,7 @@ const SlideViewer: React.FC = () => {
         slide_index: currentSlideIndex,
         slide_url: s3,
       };
-      const res = await fetch("/api/feedback", {
+      const res = await fetch(`${API_BASE}/api/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -145,7 +147,8 @@ const SlideViewer: React.FC = () => {
       if (!res.ok) throw new Error("Feedback request failed");
       const data: { student_feedback?: string } = await res.json();
       const assistantText =
-        typeof data?.student_feedback === "string" && data.student_feedback.trim().length > 0
+        typeof data?.student_feedback === "string" &&
+        data.student_feedback.trim().length > 0
           ? data.student_feedback
           : "Transcript sent to backend.";
       setMessages((prev) => [
@@ -158,12 +161,13 @@ const SlideViewer: React.FC = () => {
       ]);
     } catch (err) {
       console.error(err);
-      // Optionally show transient error in UI; skipping assistant message
+      // Optionally show a message in the chat about the error
+    } finally {
+      setIsLlmLoading(false);
     }
   };
 
   const handleTranscriptComplete = async (text: string) => {
-    // When audio recording finishes, automatically send to backend
     console.log("[Audio] transcript complete, length:", text?.length || 0);
     await sendMessageToBackend(text);
   };
@@ -240,7 +244,7 @@ const SlideViewer: React.FC = () => {
       <div
         style={{
           flex: 1,
-          position: "relative",
+          position: "relative", // important so absolute snail anchors to this
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -267,7 +271,7 @@ const SlideViewer: React.FC = () => {
         {/* Previous / Next slide buttons */}
         <div
           style={{
-            position: "fixed",
+            position: "absolute",
             bottom: 24,
             left: 24,
             display: "flex",
@@ -311,26 +315,81 @@ const SlideViewer: React.FC = () => {
           </button>
         </div>
 
-        {/* Chat toggle button */}
-        <button
-          onClick={handleToggleChat}
+        {/* Snail icon and thinking animation (absolute, not fixed) */}
+        <div
           style={{
-            position: "fixed",
-            right: 24,
+            position: "absolute",
             bottom: 24,
-            padding: "10px 18px",
-            borderRadius: 9999,
-            border: "none",
-            backgroundColor: "#2563eb",
-            color: "#ffffff",
-            fontWeight: 600,
-            fontSize: 14,
-            boxShadow: "0 10px 25px rgba(37,99,235,0.5)",
-            cursor: "pointer",
+            right: 24,
+            zIndex: 5,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+            transition: "transform 0.25s ease",
+            transform: isChatOpen ? "translateX(-12px)" : "translateX(0)",
           }}
         >
-          {isChatOpen ? "Hide assistant" : "Ask the assistant"}
-        </button>
+          {/* Thinking bubble animation above snail while waiting on LLM */}
+          {isLlmLoading && (
+            <div
+              style={{
+                width: 180,
+                height: 110,
+                borderRadius: 18,
+                backgroundColor: "rgba(15,23,42,0.95)",
+                boxShadow: "0 12px 35px rgba(0,0,0,0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 8,
+              }}
+            >
+              <video
+                src="/thinking_bubble.webm"
+                autoPlay
+                loop
+                muted
+                playsInline
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  borderRadius: 12,
+                }}
+              />
+            </div>
+          )}
+
+          {/* Snail animation as chat toggle */}
+          <button
+            type="button"
+            onClick={handleToggleChat}
+            style={{
+              border: "none",
+              background: "transparent",
+              padding: 0,
+              cursor: "pointer",
+            }}
+          >
+            <video
+              src="/snail.webm"
+              autoPlay
+              loop
+              muted
+              playsInline
+              style={{
+                width: 72,
+                height: "auto",
+                borderRadius: 9999,
+                boxShadow: isChatOpen
+                  ? "0 0 16px rgba(96,165,250,0.9)"
+                  : "0 0 0 rgba(0,0,0,0)",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                transform: isChatOpen ? "scale(1.05)" : "scale(1)",
+              }}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Chat sidebar */}
